@@ -2,75 +2,27 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, ZoomIn } from 'lucide-react'
 import { cn } from '../../utils/cn'
+import { getPreferredLocalProductImageUrl } from '../../utils/productLocalImages'
 
 export default function ProductImages({ images = [], productName = '' }) {
   const [activeIdx, setActiveIdx] = useState(0)
   const [zoomed,    setZoomed]    = useState(false)
 
-  const getLocalJpgSrc = (name) => {
-    if (!name) return null
-    const sanitizedName = name.replace(/[^a-zA-Z0-9\s_\-\.]/g, '').trim()
-    return `/images/products/${sanitizedName}.jpg`
-  }
+  const preferredLocal = getPreferredLocalProductImageUrl(productName)
 
-  const getLocalJpegSrc = (name) => {
-    if (!name) return null
-    const sanitizedName = name.replace(/[^a-zA-Z0-9\s_\-\.]/g, '').trim()
-    return `/images/products/${sanitizedName}.jpeg`
-  }
-
-  const getLocalPngSrc = (name) => {
-    if (!name) return null
-    const sanitizedName = name.replace(/[^a-zA-Z0-9\s_\-\.]/g, '').trim()
-    return `/images/products/${sanitizedName}.png`
-  }
-
-  const [firstImageSrc, setFirstImageSrc] = useState(() => getLocalJpgSrc(productName) || images[0])
-  const [attemptStage, setAttemptStage] = useState(0) // 0: JPG, 1: JPEG, 2: PNG, 3: Fallback
+  const [firstImageSrc, setFirstImageSrc] = useState(() => preferredLocal || images[0])
+  const [attemptStage, setAttemptStage] = useState(0) // 0: local, 1: backend fallback
 
   useEffect(() => {
-    setFirstImageSrc(getLocalJpgSrc(productName) || images[0])
+    const nextLocal = getPreferredLocalProductImageUrl(productName)
+    setFirstImageSrc(nextLocal || images[0])
     setAttemptStage(0)
   }, [productName, images])
 
   const handleFirstImageError = () => {
-    if (attemptStage === 0) {
-      const jpeg = getLocalJpegSrc(productName)
-      if (jpeg) {
-        setFirstImageSrc(jpeg)
-        setAttemptStage(1)
-      } else {
-        const png = getLocalPngSrc(productName)
-        if (png) {
-          setFirstImageSrc(png)
-          setAttemptStage(2)
-        } else if (images[0]) {
-          setFirstImageSrc(images[0])
-          setAttemptStage(3)
-        } else {
-          setFirstImageSrc(null)
-          setAttemptStage(3)
-        }
-      }
-    } else if (attemptStage === 1) {
-      const png = getLocalPngSrc(productName)
-      if (png) {
-        setFirstImageSrc(png)
-        setAttemptStage(2)
-      } else if (images[0]) {
-        setFirstImageSrc(images[0])
-        setAttemptStage(3)
-      } else {
-        setFirstImageSrc(null)
-        setAttemptStage(3)
-      }
-    } else if (attemptStage === 2) {
-      if (images[0]) {
-        setFirstImageSrc(images[0])
-      } else {
-        setFirstImageSrc(null)
-      }
-      setAttemptStage(3)
+    if (attemptStage === 0 && images[0]) {
+      setFirstImageSrc(images[0])
+      setAttemptStage(1)
     }
   }
 

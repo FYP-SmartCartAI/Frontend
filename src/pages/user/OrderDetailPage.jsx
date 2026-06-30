@@ -79,6 +79,9 @@ export default function OrderDetailPage() {
   }
 
   const status           = order.status?.toLowerCase()
+  const isCodCollected   =
+    order.paymentStatus === 'cod_collected' ||
+    (order.paymentMethod === 'cod' && status === 'cod_collected')
   const isPaidStripe     = order.paymentMethod === 'stripe' && order.paymentStatus === 'paid'
   const canCancel        = CANCELLABLE_STATUSES.includes(status) && status !== 'cancelled'
   const canCompletePayment =
@@ -245,8 +248,18 @@ export default function OrderDetailPage() {
               <p className="text-sm text-text-secondary capitalize">{order.paymentMethod}</p>
               <p className="text-xs text-text-tertiary mt-1">
                 Status:{' '}
-                <span className={order.paymentStatus === 'paid' ? 'text-success' : 'text-warning'}>
-                  {order.paymentStatus === 'paid' ? 'Paid' : order.paymentStatus === 'cod_pending' ? 'COD Pending' : 'Pending'}
+                <span className={
+                  order.paymentStatus === 'paid' || isCodCollected
+                    ? 'text-success'
+                    : 'text-warning'
+                }>
+                  {order.paymentStatus === 'paid'
+                    ? 'Paid'
+                    : isCodCollected
+                      ? 'Collected'
+                      : order.paymentStatus === 'cod_pending'
+                        ? 'COD Pending'
+                        : 'Pending'}
                 </span>
               </p>
             </div>

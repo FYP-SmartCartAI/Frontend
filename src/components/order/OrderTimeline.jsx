@@ -14,8 +14,13 @@ const STEPS = [
 const ORDER_IDX = STEPS.reduce((acc, s, i) => ({ ...acc, [s.status]: i }), {})
 
 export default function OrderTimeline({ currentStatus, statusHistory = [] }) {
-  const currentIdx = ORDER_IDX[currentStatus?.toLowerCase()] ?? -1
-  const isCancelled = currentStatus?.toLowerCase() === 'cancelled'
+  const normalizedStatus = currentStatus?.toLowerCase()
+  // cod_collected follows delivered — show the full fulfilment path as complete
+  const currentIdx =
+    normalizedStatus === 'cod_collected'
+      ? ORDER_IDX.delivered
+      : ORDER_IDX[normalizedStatus] ?? -1
+  const isCancelled = normalizedStatus === 'cancelled'
 
   if (isCancelled) {
     return (

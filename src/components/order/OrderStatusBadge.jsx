@@ -5,8 +5,9 @@ const STATUS_MAP = {
   confirmed:  { variant: 'info',    label: 'Confirmed'   },
   processing: { variant: 'info',    label: 'Processing'  },
   shipped:    { variant: 'gold',    label: 'Shipped'     },
-  delivered:  { variant: 'success', label: 'Delivered'   },
-  cancelled:  { variant: 'error',   label: 'Cancelled'   },
+  delivered:      { variant: 'success', label: 'Delivered'      },
+  cod_collected:  { variant: 'success', label: 'COD Collected'  },
+  cancelled:      { variant: 'error',   label: 'Cancelled'      },
   refunded:   { variant: 'muted',   label: 'Refunded'    },
 }
 

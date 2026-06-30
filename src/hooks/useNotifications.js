@@ -14,7 +14,7 @@ export const useNotifications = () => {
     data:      notificationsData,
     isLoading: loadingNotifications,
     isError:   notifError,
-  } = useGetNotificationsQuery(undefined, { skip: !isAuthenticated })
+  } = useGetNotificationsQuery({}, { skip: !isAuthenticated })
 
   const {
     data:      countData,

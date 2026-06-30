@@ -1,8 +1,6 @@
 import { useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { selectIsAuth } from './store/slices/authSlice'
-import { requestAndSaveToken } from './firebase'
 
 // Layouts
 import PublicLayout    from './components/layout/PublicLayout'
@@ -61,7 +59,6 @@ import SubadminTickets      from './pages/subadmin/TicketsPage'
 
 export default function App() {
   const theme = useSelector((state) => state.ui.theme)
-  const isAuthenticated = useSelector(selectIsAuth)
 
   // Refresh role from server + clear expired tokens on every app load
   const { isBootstrapping } = useSessionBootstrap()
@@ -76,12 +73,6 @@ export default function App() {
       root.classList.remove('light')
     }
   }, [theme])
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      requestAndSaveToken().catch(err => console.error("Error setting up FCM token on app load:", err))
-    }
-  }, [isAuthenticated])
 
   if (isBootstrapping) {
     return <FullPageSpinner />

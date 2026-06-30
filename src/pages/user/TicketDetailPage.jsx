@@ -2,16 +2,14 @@ import { useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useForm } from 'react-hook-form'
-import { useDispatch } from 'react-redux'
 import { ChevronLeft, Send, AlertCircle, CheckCircle2 } from 'lucide-react'
 import {
   useGetTicketByIdQuery,
   useAddMessageMutation,
   useCloseTicketMutation,
-  ticketApi,
 } from '../../store/api/ticketApi'
 import { useAuth } from '../../hooks/useAuth'
-import { useSocket } from '../../context/SocketContext'
+import { useTicketRoom } from '../../hooks/useTicketRoom'
 import MessageBubble     from '../../components/ticket/MessageBubble'
 import TicketStatusBadge from '../../components/ticket/TicketStatusBadge'
 import Skeleton          from '../../components/ui/Skeleton'
@@ -21,8 +19,6 @@ import toast             from 'react-hot-toast'
 export default function TicketDetailPage() {
   const { id } = useParams()
   const { user } = useAuth()
-  const dispatch = useDispatch()
-  const socket   = useSocket()
   const bottomRef = useRef(null)
 
   const { data, isLoading, isError } = useGetTicketByIdQuery(id)
@@ -39,32 +35,7 @@ export default function TicketDetailPage() {
                  : '/support'
   const backLabel = (user?.role === 'subadmin' || user?.role === 'admin') ? 'Support Tickets' : 'Support'
 
-  // Real-time messages via socket — no polling
-  useEffect(() => {
-    if (!socket || !id) return
-
-    socket.emit('join_ticket', { ticketId: id })
-
-    const onNewMessage = ({ ticketId, message }) => {
-      if (String(ticketId) !== String(id)) return
-      dispatch(
-        ticketApi.util.updateQueryData('getTicketById', id, (draft) => {
-          const target = draft?.ticket || draft
-          if (!target) return
-          const list = target.messages ?? (target.messages = [])
-          if (list.some((m) => String(m._id) === String(message._id))) return
-          list.push(message)
-        }),
-      )
-    }
-
-    socket.on('new_message', onNewMessage)
-
-    return () => {
-      socket.emit('leave_ticket', { ticketId: id })
-      socket.off('new_message', onNewMessage)
-    }
-  }, [socket, id, dispatch])
+  useTicketRoom(id)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -158,9 +129,9 @@ export default function TicketDetailPage() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-        {messages.map((msg) => (
+        {messages.map((msg, index) => (
           <MessageBubble
-            key={msg._id}
+            key={msg._id || `${msg.createdAt}-${index}`}
             message={msg}
             isOwn={
               String(msg.sender?._id || msg.sender) === String(user?._id)
