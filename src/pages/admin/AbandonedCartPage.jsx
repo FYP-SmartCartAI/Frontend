@@ -45,7 +45,7 @@ export default function AdminAbandonedCartPage() {
           Abandoned Cart Recovery
         </h1>
         <p className="text-sm text-text-secondary mb-6">
-          Monitor abandoned carts and trigger email recovery campaigns.
+          Monitor abandoned carts and trigger recovery campaigns.
         </p>
 
         {/* Stats */}

@@ -218,11 +218,11 @@ export default function CheckoutPage() {
               <div className="border-t border-border pt-3 space-y-1.5 mb-4">
                 <div className="flex justify-between text-xs text-text-secondary">
                   <span>Subtotal</span>
-                  <span className="font-[var(--font-mono)]">{formatPrice(cart?.subtotal)}</span>
+                  <span className="font-[var(--font-mono)]">{formatPrice(cart?.subtotal || cart?.total || 0)}</span>
                 </div>
-                {cart?.discount > 0 && (
+                {(cart?.discount > 0) && (
                   <div className="flex justify-between text-xs text-success">
-                    <span>Discount</span>
+                    <span>Discount Savings</span>
                     <span className="font-[var(--font-mono)]">-{formatPrice(cart.discount)}</span>
                   </div>
                 )}
@@ -232,7 +232,14 @@ export default function CheckoutPage() {
                 </div>
                 <div className="flex justify-between text-sm font-semibold text-text-primary pt-2 border-t border-border">
                   <span>Total</span>
-                  <span className="text-accent font-[var(--font-mono)]">{formatPrice(cart?.total)}</span>
+                  <div className="flex flex-col items-end gap-0.5">
+                    {cart?.discount > 0 && (
+                      <span className="text-[10px] text-text-tertiary line-through font-[var(--font-mono)]">
+                        {formatPrice(cart.subtotal)}
+                      </span>
+                    )}
+                    <span className="text-accent font-[var(--font-mono)]">{formatPrice(cart?.total)}</span>
+                  </div>
                 </div>
               </div>
 

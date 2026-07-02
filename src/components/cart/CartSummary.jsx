@@ -39,7 +39,7 @@ export default function CartSummary({ cart, onClose }) {
       <div className="space-y-2 py-3 border-t border-b border-border">
         <Row label="Subtotal" value={formatPrice(subtotal)} />
         {discount > 0 && (
-          <Row label="Discount" value={`-${formatPrice(discount)}`} className="text-success" />
+          <Row label="Discount Savings" value={`-${formatPrice(discount)}`} className="text-success" />
         )}
         <Row label="Shipping" value={shipping > 0 ? formatPrice(shipping) : 'Free'} />
       </div>
@@ -47,12 +47,19 @@ export default function CartSummary({ cart, onClose }) {
       {/* Total */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-text-primary">Total</span>
-        <span
-          className="text-lg font-bold text-accent"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          {formatPrice(total)}
-        </span>
+        <div className="flex flex-col items-end gap-0.5">
+          {discount > 0 && (
+            <span className="text-xs text-text-tertiary line-through font-[var(--font-mono)]">
+              {formatPrice(subtotal)}
+            </span>
+          )}
+          <span
+            className="text-lg font-bold text-accent"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            {formatPrice(total)}
+          </span>
+        </div>
       </div>
 
       {/* CTA */}

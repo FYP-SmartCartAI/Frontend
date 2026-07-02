@@ -88,7 +88,6 @@ export default function SearchPage() {
             </p>
             {aiData?.count != null && (
               <span className="text-xs text-text-tertiary ml-1">
-                ({aiData.count} found)
               </span>
             )}
           </div>

@@ -63,7 +63,7 @@ export default function AdminDashboard() {
           </h1>
         </div>
         <p className="text-sm text-text-secondary">
-          Welcome back — here's what's happening today.
+          Welcome back here's what's happening today.
         </p>
       </motion.div>
 

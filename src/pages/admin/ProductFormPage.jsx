@@ -36,6 +36,7 @@ export default function ProductFormPage() {
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm()
 
   const selectedCategorySlug = watch('category')
+  const watchedPrice         = watch('price')
   const selectedCategory = categories.find((cat) => cat.slug === selectedCategorySlug)
   const subcategories = selectedCategory?.subcategories ?? []
 
@@ -134,11 +135,20 @@ export default function ProductFormPage() {
   }
 
   const onSubmit = async (data) => {
+    const price         = Number(data.price)
+    const discountPrice = data.discountPrice ? Number(data.discountPrice) : undefined
+
+    // Guard: discountPrice must be strictly less than price
+    if (discountPrice !== undefined && discountPrice >= price) {
+      toast.error('Discount price must be less than the actual price', { duration: 4000 })
+      return
+    }
+
     const payload = {
       name:          data.name,
       description:   data.description,
-      price:         Number(data.price),
-      discountPrice: data.discountPrice ? Number(data.discountPrice) : undefined,
+      price,
+      discountPrice,
       stock:         Number(data.stock),
       category:      data.category,
       subcategory:   data.subcategory || '',
@@ -324,7 +334,17 @@ export default function ProductFormPage() {
               min={0}
               step={1}
               hint="Leave empty for no discount"
-              {...register('discountPrice', { min: { value: 0, message: 'Must be >= 0' }, valueAsNumber: true })}
+              error={errors.discountPrice?.message}
+              {...register('discountPrice', {
+                min: { value: 0, message: 'Must be >= 0' },
+                valueAsNumber: true,
+                validate: (val) => {
+                  if (!val || isNaN(val)) return true           // empty = no discount, valid
+                  const price = Number(watchedPrice)
+                  if (val >= price) return 'Discount price must be less than the actual price'
+                  return true
+                },
+              })}
             />
             <Input
               label="Stock"

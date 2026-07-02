@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ShoppingBag, ChevronDown } from 'lucide-react'
+import { ShoppingBag, ChevronDown, Lock, Truck } from 'lucide-react'
 import { useGetAllOrdersQuery, useUpdateOrderStatusMutation } from '../../store/api/orderApi'
 import OrderStatusBadge from '../../components/order/OrderStatusBadge'
 import { TableRowSkeleton } from '../../components/ui/Skeleton'
@@ -11,13 +11,14 @@ import { formatShortDate } from '../../utils/formatDate'
 import { cn } from '../../utils/cn'
 import toast from 'react-hot-toast'
 
-// Mirror of backend SUBADMIN_TRANSITIONS — drives what options appear in the dropdown
+// Subadmin can ONLY act after the order has been shipped by admin.
+// pending / confirmed / processing are locked — admin's responsibility.
 const SUBADMIN_TRANSITIONS = {
-  pending:       ['confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
-  confirmed:     ['processing', 'shipped', 'delivered', 'cancelled'],
-  processing:    ['shipped',    'delivered', 'cancelled'],
-  shipped:       ['delivered',  'cancelled'],
-  delivered:     ['cod_collected'],
+  pending:       [],               // locked — admin must ship first
+  confirmed:     [],               // locked — admin must ship first
+  processing:    [],               // locked — admin must ship first
+  shipped:       ['delivered'],    // subadmin confirms delivery in their city
+  delivered:     ['cod_collected'],// subadmin marks COD cash received
   cancelled:     [],
   cod_collected: [],
 }
@@ -33,12 +34,14 @@ const STATUS_DOT = {
   cancelled:     '#f87171',
 }
 
+// Statuses where the dropdown is locked (waiting for admin)
+const ADMIN_PENDING_STATUSES = new Set(['pending', 'confirmed', 'processing'])
+
 const labelOf = (s) => s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 
 export default function SubadminOrdersPage() {
   const [page, setPage] = useState(1)
   const [statusFilter, setStatus] = useState('')
-  // Track the currently selected value per order (controlled)
   const [pendingStatus, setPendingStatus] = useState({})
 
   const { data, isLoading } = useGetAllOrdersQuery({
@@ -46,7 +49,7 @@ export default function SubadminOrdersPage() {
   })
   const [updateStatus, { isLoading: updating }] = useUpdateOrderStatusMutation()
 
-  const orders = data?.orders || []
+  const orders     = data?.orders     || []
   const totalPages = data?.totalPages || 1
 
   const getSelectValue = (order) => pendingStatus[order._id] ?? order.status
@@ -55,34 +58,28 @@ export default function SubadminOrdersPage() {
     const currentStatus = order.status
     if (newStatus === currentStatus) return
 
-    // Client-side guard: check if this transition is allowed
+    // Client-side guard
     const allowed = SUBADMIN_TRANSITIONS[currentStatus] || []
     if (!allowed.includes(newStatus)) {
-      toast.error(
-        `❌ Cannot move from "${labelOf(currentStatus)}" to "${labelOf(newStatus)}". Orders can only move forward.`,
-        { duration: 4500 }
-      )
+      toast.error(`❌ Cannot move from "${labelOf(currentStatus)}" to "${labelOf(newStatus)}".`, { duration: 4000 })
       setPendingStatus(prev => ({ ...prev, [order._id]: currentStatus }))
       return
     }
 
-    // Guard: cod_collected is only valid for COD orders
+    // Guard: cod_collected only for COD orders
     if (newStatus === 'cod_collected' && order.paymentMethod !== 'cod') {
-      toast.error('❌ "Cod Collected" is only valid for Cash on Delivery orders.', { duration: 4500 })
+      toast.error('❌ "COD Collected" is only valid for Cash on Delivery orders.', { duration: 4000 })
       setPendingStatus(prev => ({ ...prev, [order._id]: currentStatus }))
       return
     }
 
-    // Optimistically update the select
     setPendingStatus(prev => ({ ...prev, [order._id]: newStatus }))
-
     try {
       await updateStatus({ id: order._id, status: newStatus }).unwrap()
-      toast.success(`✅ Order status updated to "${newStatus}"`)
+      toast.success(`✅ Order marked as "${labelOf(newStatus)}"`)
     } catch (err) {
       const msg = err?.data?.message || 'Failed to update status'
-      toast.error(`❌ ${msg}`, { duration: 4500 })
-      // Roll back dropdown to the real current status on failure
+      toast.error(`❌ ${msg}`, { duration: 4000 })
       setPendingStatus(prev => ({ ...prev, [order._id]: currentStatus }))
     }
   }
@@ -134,10 +131,11 @@ export default function SubadminOrdersPage() {
                   ? (<tr><td colSpan={6} className="py-16"><EmptyState icon={ShoppingBag} title="No orders found" /></td></tr>)
                   : orders.map((order) => {
                     const currentStatus = order.status
-                    const selectValue = getSelectValue(order)
-                    const allowedNext = (SUBADMIN_TRANSITIONS[currentStatus] || [])
+                    const selectValue   = getSelectValue(order)
+                    const allowedNext   = (SUBADMIN_TRANSITIONS[currentStatus] || [])
                       .filter((s) => s !== 'cod_collected' || order.paymentMethod === 'cod')
-                    const isTerminal = allowedNext.length === 0
+                    const isTerminal    = allowedNext.length === 0 && !ADMIN_PENDING_STATUSES.has(currentStatus)
+                    const isAdminLocked = ADMIN_PENDING_STATUSES.has(currentStatus)
 
                     return (
                       <tr key={order._id} className="border-b border-border last:border-0 hover:bg-bg-tertiary transition-colors">
@@ -149,7 +147,18 @@ export default function SubadminOrdersPage() {
                         <td className="px-4 py-3 text-accent font-[var(--font-mono)]">{formatPrice(order.total)}</td>
                         <td className="px-4 py-3"><OrderStatusBadge status={currentStatus} /></td>
                         <td className="px-4 py-3">
-                          {isTerminal ? (
+
+                          {/* ── Admin must ship first: locked indicator ─── */}
+                          {isAdminLocked && (
+                            <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border/50 bg-bg-tertiary/60 text-xs text-text-tertiary cursor-not-allowed select-none" style={{ minWidth: '190px' }}>
+                              <Lock size={11} className="shrink-0 text-text-tertiary/60" />
+                              <span>Waiting for admin to ship</span>
+                              <Truck size={11} className="ml-auto shrink-0 text-text-tertiary/40" />
+                            </div>
+                          )}
+
+                          {/* ── Terminal: no more updates ─────────────── */}
+                          {isTerminal && (
                             <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary italic px-3 py-2 rounded-lg border border-border/40 bg-bg-tertiary/50">
                               <span
                                 style={{ background: STATUS_DOT[currentStatus] || '#6b7280' }}
@@ -157,7 +166,10 @@ export default function SubadminOrdersPage() {
                               />
                               No further updates
                             </span>
-                          ) : (
+                          )}
+
+                          {/* ── Active dropdown: subadmin can update ──── */}
+                          {!isAdminLocked && !isTerminal && (
                             <div className="relative inline-flex items-center" style={{ minWidth: '170px' }}>
                               {/* Status colour dot */}
                               <span
@@ -176,7 +188,7 @@ export default function SubadminOrdersPage() {
                                   'outline-none transition-all cursor-pointer',
                                   'hover:border-accent/70 focus:border-accent focus:ring-2 focus:ring-accent/15',
                                   selectValue !== currentStatus && 'border-accent/50 bg-accent/5',
-                                  updating && 'opacity-50 cursor-not-allowed'
+                                  updating && 'opacity-50 cursor-not-allowed',
                                 )}
                               >
                                 <option value={currentStatus}>
@@ -184,17 +196,17 @@ export default function SubadminOrdersPage() {
                                 </option>
                                 {allowedNext.map((s) => (
                                   <option key={s} value={s}>
-                                    {labelOf(s)}
+                                    {s === 'cod_collected' ? '💵 Mark COD Collected' : labelOf(s)}
                                   </option>
                                 ))}
                               </select>
-                              {/* Custom chevron replaces native arrow */}
                               <ChevronDown
                                 size={14}
                                 className="absolute right-2.5 text-text-tertiary pointer-events-none"
                               />
                             </div>
                           )}
+
                         </td>
                       </tr>
                     )
