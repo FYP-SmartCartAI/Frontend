@@ -23,34 +23,39 @@ const CAT_CHIPS = [
   '🏠 Smart Home',
 ]
 
+import { useGetActiveFlashSaleQuery } from '../../store/api/flashSaleApi'
+
 const DEAL_CARDS = [
   {
-    emoji: '🎧',
-    name: 'ANC Pro Headphones',
-    price: 'PKR 18,500',
-    original: 'PKR 24,000',
-    off: '23% OFF',
+    imageUrl: null,
+    emoji: '📱',
+    name: 'iPhone 17 Pro',
+    price: 'PKR 306,000',
+    original: '',
+    off: null,
     rating: 4.9,
     badge: 'Best Seller',
     badgeClass: 'text-accent bg-accent/10 border-accent/30',
   },
   {
-    emoji: '⌨️',
-    name: 'Keychron Q3 Keyboard',
-    price: 'PKR 32,000',
-    original: 'PKR 38,500',
-    off: '17% OFF',
-    rating: 4.8,
+    imageUrl: null,
+    emoji: '🎧',
+    name: 'Sonic Shield ANC',
+    price: 'PKR 97,500',
+    original: '',
+    off: null,
+    rating: 4.9,
     badge: 'Top Rated',
     badgeClass: 'text-warning bg-warning/10 border-warning/30',
   },
   {
+    imageUrl: null,
     emoji: '📱',
-    name: 'Galaxy S24 Ultra',
-    price: 'PKR 3,49,000',
-    original: 'PKR 3,99,000',
-    off: '13% OFF',
-    rating: 4.9,
+    name: 'Galaxy Neo S26',
+    price: 'PKR 278,000',
+    original: '',
+    off: null,
+    rating: 4.8,
     badge: 'New Arrival',
     badgeClass: 'text-success bg-success/10 border-success/30',
   },
@@ -62,20 +67,20 @@ const TRUST = [
   { icon: ShieldCheck, label: 'Secure Checkout',  sub: 'Stripe & COD' },
 ]
 
-function useCountdown(targetH, targetM) {
+function useCountdown(targetTime) {
   const getLeft = () => {
+    if (!targetTime) return { h: 0, m: 0, s: 0 }
     const now = new Date()
-    const end = new Date()
-    end.setHours(targetH, targetM, 0, 0)
-    if (end <= now) end.setDate(end.getDate() + 1)
-    const d = Math.floor((end - now) / 1000)
+    const end = new Date(targetTime)
+    const d = Math.max(0, Math.floor((end - now) / 1000))
     return { h: Math.floor(d / 3600), m: Math.floor((d % 3600) / 60), s: d % 60 }
   }
   const [t, setT] = useState(getLeft)
   useEffect(() => {
+    setT(getLeft())
     const id = setInterval(() => setT(getLeft()), 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [targetTime])
   return t
 }
 
@@ -98,22 +103,137 @@ function StarRow({ rating }) {
   )
 }
 
+import * as LucideIcons from 'lucide-react'
+
+function DynamicIcon({ name, size = 18, className }) {
+  const IconComponent = LucideIcons[name] || LucideIcons.Package
+  return <IconComponent size={size} className={className} />
+}
+
+const getLucideIconName = (p) => {
+  if (p.iconName && p.iconName !== 'Package') return p.iconName
+
+  const name = (p.name || '').toLowerCase()
+  const tags = Array.isArray(p.tags) ? p.tags.map(t => t.toLowerCase()) : []
+  const sub  = (p.subcategory || '').toLowerCase()
+
+  // Helper helper to check string/array inclusion
+  const hasKeyword = (kw) => name.includes(kw) || sub.includes(kw) || tags.includes(kw)
+
+  if (hasKeyword('phone') || hasKeyword('mobile') || hasKeyword('smartphone') || hasKeyword('iphone') || hasKeyword('galaxy')) return 'Smartphone'
+  if (hasKeyword('headphone') || hasKeyword('earbud') || hasKeyword('buds') || hasKeyword('audio') || hasKeyword('speaker')) return 'Headphones'
+  if (hasKeyword('laptop') || hasKeyword('computer') || hasKeyword('notebook') || hasKeyword('macbook') || hasKeyword('desktop')) return 'Laptop'
+  if (hasKeyword('keyboard') || hasKeyword('typing')) return 'Keyboard'
+  if (hasKeyword('watch') || hasKeyword('clock') || hasKeyword('timer')) return 'Clock'
+  if (hasKeyword('camera') || hasKeyword('photo') || hasKeyword('lens')) return 'Camera'
+  if (hasKeyword('sandal') || hasKeyword('shoes') || hasKeyword('sneaker') || hasKeyword('footwear') || hasKeyword('boots')) return 'Tag'
+  if (hasKeyword('focus') || hasKeyword('planner') || hasKeyword('book') || hasKeyword('notebook') || hasKeyword('paper')) return 'BookOpen'
+  if (hasKeyword('power') || hasKeyword('charge') || hasKeyword('battery') || hasKeyword('kettle') || hasKeyword('electricity')) return 'Zap'
+  if (hasKeyword('home') || hasKeyword('smart-home') || hasKeyword('house') || hasKeyword('lamp') || hasKeyword('light')) return 'Home'
+  if (hasKeyword('gift') || hasKeyword('present') || hasKeyword('box')) return 'Gift'
+  if (hasKeyword('cart') || hasKeyword('shop') || hasKeyword('bag')) return 'ShoppingBag'
+  return 'Package'
+}
+
 export default function HeroDashboard() {
   const theme   = useSelector(s => s.ui.theme)
   const isLight = theme === 'light'
 
   const navigate = useNavigate()
-  const cd = useCountdown(23, 59)
+  
+  const { data: flashResponse } = useGetActiveFlashSaleQuery(undefined, {
+    pollingInterval: 30000 // poll every 30 seconds to keep dynamic sale state updated
+  })
+  
+  const activeSale = flashResponse?.active ? flashResponse.sale : null
+  const hasActiveSale = !!activeSale
+  
+  const cd = useCountdown(activeSale?.endTime)
+
+  // Dynamically map active sale products, fallback to static defaults if none active
+  const dealCards = hasActiveSale && activeSale.products?.length > 0
+    ? activeSale.products.map((p, idx) => {
+        const discountPercent = p.discountPrice && p.price
+          ? Math.round(((p.price - p.discountPrice) / p.price) * 100)
+          : 0
+        return {
+          id: p._id,
+          slug: p.slug,
+          name: p.name,
+          imageUrl: null, // Force disable image displaying to match user requirement
+          iconName: getLucideIconName(p),
+          emoji: null,
+          price: `PKR ${p.discountPrice ? p.discountPrice.toLocaleString() : p.price.toLocaleString()}`,
+          original: p.discountPrice ? `PKR ${p.price.toLocaleString()}` : '',
+          off: discountPercent > 0 ? `${discountPercent}% OFF` : null,
+          rating: p.rating || 5,
+          badge: idx === 0 ? 'Flash Deal' : idx === 1 ? 'Hot Sale' : 'Limited Offer',
+          badgeClass: idx === 0
+            ? 'text-accent bg-accent/10 border-accent/30'
+            : idx === 1
+            ? 'text-warning bg-warning/10 border-warning/30'
+            : 'text-success bg-success/10 border-success/30'
+        }
+      })
+    : DEAL_CARDS
 
   const [active, setActive] = useState(0)
+  
   useEffect(() => {
-    const id = setInterval(() => setActive(p => (p + 1) % DEAL_CARDS.length), 3000)
+    if (dealCards.length > 0) {
+      setActive(0)
+    }
+  }, [dealCards.length])
+
+  useEffect(() => {
+    if (dealCards.length <= 1) return
+    const id = setInterval(() => setActive(p => (p + 1) % dealCards.length), 4000)
     return () => clearInterval(id)
-  }, [])
+  }, [dealCards.length])
+
+  // Slide-rotation cycling logic for active sales: show 3 items from dealCards starting at active index.
+  // Statically show DEAL_CARDS fallback if not active.
+  const displayedCards = hasActiveSale
+    ? []
+    : DEAL_CARDS
+
+  if (hasActiveSale && dealCards.length > 0) {
+    const showCount = Math.min(3, dealCards.length)
+    for (let i = 0; i < showCount; i++) {
+      const idx = (active + i) % dealCards.length
+      displayedCards.push(dealCards[idx])
+    }
+  }
+
+  const handleSelectCard = (indexInDisplayed) => {
+    if (!hasActiveSale) {
+      setActive(indexInDisplayed)
+      return
+    }
+    const targetCard = displayedCards[indexInDisplayed]
+    if (!targetCard) return
+    const targetIdx = dealCards.findIndex(c => (c.id || c.name) === (targetCard.id || targetCard.name))
+    if (targetIdx !== -1) {
+      setActive(targetIdx)
+    }
+  }
+
+  const isCardSelected = (card) => {
+    const currentActiveCard = dealCards[active]
+    return currentActiveCard && card && currentActiveCard.name === card.name
+  }
 
   const gridColor = isLight ? '#D4C4A8' : '#C8965A'
 
   const go = (q) => navigate(`/search?q=${encodeURIComponent(q)}&r=${Date.now()}`)
+  
+  const handleProductAction = (card) => {
+    if (card.slug) {
+      navigate(`/products/${card.slug}`)
+    } else {
+      go(card.name)
+    }
+  }
 
   return (
     <motion.section
@@ -254,81 +374,118 @@ export default function HeroDashboard() {
 
             {/* 3 deal cards in a row */}
             <div className="grid grid-cols-3 gap-2">
-              {DEAL_CARDS.map((card, i) => (
-                <motion.button
-                  key={i}
-                  onClick={() => setActive(i)}
-                  whileHover={{ y: -2 }}
-                  transition={{ duration: 0.18 }}
-                  className={`relative text-left p-3 rounded-[var(--radius-md)] border transition-all duration-300 flex flex-col gap-1.5 ${
-                    active === i
-                      ? 'border-accent/50 bg-bg-tertiary shadow-[var(--shadow-gold)]'
-                      : 'border-border bg-bg-tertiary/40 hover:border-border-accent'
-                  }`}
-                >
-                  {/* Off badge */}
-                  <span className="absolute top-2 right-2 text-[8px] font-bold text-error bg-error/10 border border-error/25 px-1.5 py-0.5 rounded-full">
-                    {card.off}
-                  </span>
+              {displayedCards.map((card, i) => {
+                const isSelected = isCardSelected(card)
+                return (
+                  <motion.button
+                    key={card.id || card.name || i}
+                    onClick={() => handleSelectCard(i)}
+                    whileHover={{ y: -2 }}
+                    transition={{ duration: 0.18 }}
+                    className={`relative text-left p-3 rounded-[var(--radius-md)] border transition-all duration-300 flex flex-col gap-1.5 ${
+                      isSelected
+                        ? 'border-accent/50 bg-bg-tertiary shadow-[var(--shadow-gold)]'
+                        : 'border-border bg-bg-tertiary/40 hover:border-border-accent'
+                    }`}
+                  >
+                    {/* Off badge */}
+                    {card.off && (
+                      <span className="absolute top-2 right-2 text-[8px] font-bold text-error bg-error/10 border border-error/25 px-1.5 py-0.5 rounded-full">
+                        {card.off}
+                      </span>
+                    )}
 
-                  {/* Emoji */}
-                  <span className="text-2xl leading-none">{card.emoji}</span>
+                    {/* Image, Emoji, or Lucide Icon */}
+                    {card.imageUrl ? (
+                      <img
+                        src={card.imageUrl}
+                        alt={card.name}
+                        className="w-8 h-8 object-cover rounded border border-border"
+                      />
+                    ) : card.emoji ? (
+                      <span className="text-2xl leading-none">{card.emoji}</span>
+                    ) : (
+                      <div className="w-8 h-8 rounded bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+                        <DynamicIcon name={card.iconName} className="text-accent" size={16} />
+                      </div>
+                    )}
 
-                  {/* Name */}
-                  <p className="text-[10px] font-semibold text-text-primary leading-tight line-clamp-2 pr-4">
-                    {card.name}
-                  </p>
+                    {/* Name */}
+                    <p className="text-[10px] font-semibold text-text-primary leading-tight line-clamp-2 pr-4">
+                      {card.name}
+                    </p>
 
-                  {/* Rating */}
-                  <StarRow rating={card.rating} />
+                    {/* Rating */}
+                    <StarRow rating={card.rating} />
 
-                  {/* Price */}
-                  <div className="mt-auto">
-                    <p className="text-[9px] text-text-tertiary line-through leading-none">{card.original}</p>
-                    <p className="text-xs font-extrabold text-accent">{card.price}</p>
-                  </div>
+                    {/* Price */}
+                    <div className="mt-auto">
+                      {card.original && (
+                        <p className="text-[9px] text-text-tertiary line-through leading-none">{card.original}</p>
+                      )}
+                      <p className="text-xs font-extrabold text-accent">{card.price}</p>
+                    </div>
 
-                  {/* Badge */}
-                  <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wide w-fit ${card.badgeClass}`}>
-                    {card.badge}
-                  </span>
-                </motion.button>
-              ))}
+                    {/* Badge */}
+                    <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded-full border uppercase tracking-wide w-fit ${card.badgeClass}`}>
+                      {card.badge}
+                    </span>
+                  </motion.button>
+                )
+              })}
             </div>
 
             {/* Active product detail strip */}
             <AnimatePresence mode="wait">
-              <motion.div
-                key={active}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25 }}
-                className="flex items-center justify-between px-3 py-2.5 rounded-[var(--radius-md)] border border-accent/25 bg-accent/5"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-xl">{DEAL_CARDS[active].emoji}</span>
-                  <div>
-                    <p className="text-xs font-semibold text-text-primary">{DEAL_CARDS[active].name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <StarRow rating={DEAL_CARDS[active].rating} />
-                      <span className="text-[9px] text-text-tertiary">{DEAL_CARDS[active].rating} / 5</span>
+              {dealCards[active] && (
+                <motion.div
+                  key={dealCards[active].id || dealCards[active].name || active}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.25 }}
+                  className="flex items-center justify-between px-3 py-2.5 rounded-[var(--radius-md)] border border-accent/25 bg-accent/5"
+                >
+                  <div className="flex items-center gap-2.5">
+                    {dealCards[active].imageUrl ? (
+                      <img
+                        src={dealCards[active].imageUrl}
+                        alt={dealCards[active].name}
+                        className="w-9 h-9 object-cover rounded border border-border"
+                      />
+                    ) : dealCards[active].emoji ? (
+                      <span className="text-xl">{dealCards[active].emoji}</span>
+                    ) : (
+                      <div className="w-9 h-9 rounded bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0">
+                        <DynamicIcon name={dealCards[active].iconName} className="text-accent" size={18} />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs font-semibold text-text-primary truncate max-w-[200px]">
+                        {dealCards[active].name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <StarRow rating={dealCards[active].rating} />
+                        <span className="text-[9px] text-text-tertiary">{dealCards[active].rating} / 5</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="text-[9px] text-text-tertiary line-through">{DEAL_CARDS[active].original}</p>
-                    <p className="text-sm font-extrabold text-accent">{DEAL_CARDS[active].price}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      {dealCards[active].original && (
+                        <p className="text-[9px] text-text-tertiary line-through">{dealCards[active].original}</p>
+                      )}
+                      <p className="text-sm font-extrabold text-accent">{dealCards[active].price}</p>
+                    </div>
+                    <button
+                      onClick={() => handleProductAction(dealCards[active])}
+                      className="flex items-center gap-1 bg-accent text-bg-primary text-[10px] font-bold px-3 py-1.5 rounded-full hover:bg-accent-light transition-colors shrink-0"
+                    >
+                      Shop <ArrowRight size={9} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => go(DEAL_CARDS[active].name)}
-                    className="flex items-center gap-1 bg-accent text-bg-primary text-[10px] font-bold px-3 py-1.5 rounded-full hover:bg-accent-light transition-colors shrink-0"
-                  >
-                    Shop <ArrowRight size={9} />
-                  </button>
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
             </AnimatePresence>
 
           </div>

@@ -50,6 +50,7 @@ import AdminSubadmins    from './pages/admin/SubadminsPage'
 import AdminTickets      from './pages/admin/TicketsPage'
 import AdminVectorSync   from './pages/admin/VectorSyncPage'
 import AdminAbandonedCart from './pages/admin/AbandonedCartPage'
+import AdminFlashSale from './pages/admin/FlashSalePage'
 
 // Subadmin pages
 import SubadminDashboard    from './pages/subadmin/DashboardPage'
@@ -141,6 +142,7 @@ export default function App() {
           <Route path="tickets/:id"    element={<TicketDetailPage />} />
           <Route path="vector-sync"    element={<AdminVectorSync />} />
           <Route path="abandoned-cart" element={<AdminAbandonedCart />} />
+          <Route path="flash-sale"     element={<AdminFlashSale />} />
           <Route path="notifications"  element={<NotificationsPage />} />
           <Route path="profile"        element={<ProfilePage />} />
         </Route>

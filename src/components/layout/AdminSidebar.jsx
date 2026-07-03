@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, Package, Tag, ShoppingBag, Users,
   UserCog, Ticket, Database, ShoppingCart,
-  LogOut, X, Sparkles, ChevronRight, Bell, User
+  LogOut, X, Sparkles, ChevronRight, Bell, User, Zap
 } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { useAuth } from '../../hooks/useAuth'
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { to: '/admin/notifications',  label: 'Notifications',   icon: Bell, badge: 'notif' },
   { to: '/admin/vector-sync',    label: 'Vector Sync',     icon: Database        },
   { to: '/admin/abandoned-cart', label: 'Abandoned Cart',  icon: ShoppingCart    },
+  { to: '/admin/flash-sale',     label: 'Flash Sale',      icon: Zap             },
   { to: '/admin/profile',        label: 'My Profile',      icon: User            },
 ]
 
