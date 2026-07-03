@@ -118,7 +118,11 @@ export default function ProductFormPage() {
       toast.error('Maximum 20 tags allowed')
       return
     }
-    if (tags.includes(tag)) return
+    if (tags.includes(tag)) {
+      toast.error(`Tag "${tag}" already exists`)
+      setTagInput('')
+      return
+    }
     setTags((prev) => [...prev, tag])
     setTagInput('')
   }
