@@ -27,7 +27,7 @@ function StatCard({ icon: Icon, label, value, sub, accent = false }) {
           <Icon size={16} className={accent ? 'text-accent' : 'text-text-secondary'} />
         </div>
       </div>
-      <p className="text-2xl font-bold text-text-primary mb-1" style={{ fontFamily: 'var(--font-mono)' }}>
+      <p className="text-xl sm:text-2xl font-bold text-text-primary mb-1 truncate" style={{ fontFamily: 'var(--font-mono)' }}>
         {value}
       </p>
       <p className="text-xs text-text-secondary">{label}</p>
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
 
       {/* Stat cards */}
       {isLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {Array.from({ length: 8 }).map((_, i) => <StatCardSkeleton key={i} />)}
         </div>
       ) : (
@@ -77,7 +77,7 @@ export default function AdminDashboard() {
           variants={stagger}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
           <StatCard icon={DollarSign}   label="Total Revenue"  value={formatPrice(stats?.totalRevenue)}   accent />
           <StatCard icon={ShoppingBag}  label="Total Orders"   value={stats?.totalOrders?.toLocaleString()}   />

@@ -330,7 +330,7 @@ export default function ProductFormPage() {
               min={1}
               step={1}
               error={errors.price?.message}
-              {...register('price', { required: 'Required', min: { value: 1, message: 'Must be at least 1' }, valueAsNumber: true })}
+              {...register('price', { required: 'Required', min: { value: 1, message: 'Must be at least 1' } })}
             />
             <Input
               label="Discount Price"
@@ -341,11 +341,12 @@ export default function ProductFormPage() {
               error={errors.discountPrice?.message}
               {...register('discountPrice', {
                 min: { value: 0, message: 'Must be >= 0' },
-                valueAsNumber: true,
                 validate: (val) => {
-                  if (!val || isNaN(val)) return true           // empty = no discount, valid
+                  if (val === '' || val === undefined || val === null) return true
+                  const numericVal = Number(val)
                   const price = Number(watchedPrice)
-                  if (val >= price) return 'Discount price must be less than the actual price'
+                  if (isNaN(numericVal)) return true
+                  if (numericVal >= price) return 'Discount price must be less than the actual price'
                   return true
                 },
               })}
@@ -356,7 +357,7 @@ export default function ProductFormPage() {
               min={0}
               step={1}
               error={errors.stock?.message}
-              {...register('stock', { required: 'Required', min: { value: 0, message: 'Must be >= 0' }, valueAsNumber: true })}
+              {...register('stock', { required: 'Required', min: { value: 0, message: 'Must be >= 0' } })}
             />
           </div>
         </div>

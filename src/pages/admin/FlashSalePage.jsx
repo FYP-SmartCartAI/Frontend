@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles, Clock, Plus, X, Trash2,
-  AlertCircle, CheckCircle2, Zap, Search, Package, Calendar
+  AlertCircle, CheckCircle2, Zap, Search, Package, Calendar, ExternalLink
 } from 'lucide-react'
 import {
   useGetActiveFlashSaleQuery,
@@ -41,9 +41,17 @@ function useActiveCountdown(targetTime) {
 }
 
 export default function AdminFlashSalePage() {
-  const [title, setTitle] = useState('')
-  const [duration, setDuration] = useState(6)
-  const [selectedProds, setSelectedProds] = useState([])
+  const [title, setTitle] = useState(() => {
+    return localStorage.getItem('flash_sale_title') || ''
+  })
+  const [duration, setDuration] = useState(() => {
+    const val = localStorage.getItem('flash_sale_duration')
+    return val ? Number(val) : 6
+  })
+  const [selectedProds, setSelectedProds] = useState(() => {
+    const val = localStorage.getItem('flash_sale_selected_prods')
+    return val ? JSON.parse(val) : []
+  })
   const [search, setSearch] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [termSaleId, setTermSaleId] = useState(null)
@@ -62,6 +70,19 @@ export default function AdminFlashSalePage() {
     return () => document.removeEventListener('mousedown', handler)
   }, [showDropdown])
 
+  // Sync state changes to localStorage
+  useEffect(() => {
+    localStorage.setItem('flash_sale_title', title)
+  }, [title])
+
+  useEffect(() => {
+    localStorage.setItem('flash_sale_duration', String(duration))
+  }, [duration])
+
+  useEffect(() => {
+    localStorage.setItem('flash_sale_selected_prods', JSON.stringify(selectedProds))
+  }, [selectedProds])
+
   // API Hooks
   const { data: activeRes, isLoading: loadingActive } = useGetActiveFlashSaleQuery()
   const { data: allSales = [], isLoading: loadingAll } = useGetAllFlashSalesQuery()
@@ -75,10 +96,7 @@ export default function AdminFlashSalePage() {
   const hasActiveSale = !!activeSale
   const timerStr = useActiveCountdown(activeSale?.endTime)
 
-  // Filter fetched products so we only offer products that have a discountPrice set
-  const filteredProducts = (prodsData?.products || []).filter(
-    (p) => p.discountPrice && p.discountPrice < p.price
-  )
+  const allProducts = prodsData?.products || []
 
   const handleSelectProduct = (prod) => {
     if (selectedProds.some((p) => p._id === prod._id)) {
@@ -88,6 +106,15 @@ export default function AdminFlashSalePage() {
     setSelectedProds((prev) => [...prev, prod])
     setSearch('')
     setShowDropdown(false)
+  }
+
+  const handleProductClick = (p) => {
+    const isDiscounted = p.discountPrice && p.discountPrice < p.price
+    if (isDiscounted) {
+      handleSelectProduct(p)
+    } else {
+      window.open(`/admin/products/${p.slug}`, '_blank')
+    }
   }
 
   const handleRemoveProduct = (id) => {
@@ -112,10 +139,13 @@ export default function AdminFlashSalePage() {
         duration: Number(duration),
       }).unwrap()
       toast.success('Flash sale launched successfully!')
-      // Reset form
+      // Reset form and clear localStorage
       setTitle('')
       setDuration(6)
       setSelectedProds([])
+      localStorage.removeItem('flash_sale_title')
+      localStorage.removeItem('flash_sale_duration')
+      localStorage.removeItem('flash_sale_selected_prods')
     } catch (err) {
       toast.error(err?.data?.message || 'Could not launch flash sale')
     }
@@ -181,9 +211,11 @@ export default function AdminFlashSalePage() {
           >
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-accent animate-ping" />
-                <span className="w-2.5 h-2.5 rounded-full bg-accent absolute" />
-                <span className="text-sm font-bold text-text-primary ml-3">{activeSale.title}</span>
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-accent"></span>
+                </span>
+                <span className="text-sm font-bold text-text-primary">{activeSale.title}</span>
               </div>
               <p className="text-xs text-text-secondary">
                 Running from {formatDateTime(activeSale.startTime)} to {formatDateTime(activeSale.endTime)}
@@ -258,11 +290,12 @@ export default function AdminFlashSalePage() {
                 disabled={hasActiveSale}
                 className="w-full accent-accent bg-bg-tertiary cursor-pointer disabled:opacity-50"
               />
-              <div className="flex justify-between text-[9px] text-text-tertiary font-mono">
-                <span>1h</span>
-                <span>6h (default)</span>
-                <span>12h</span>
-                <span>24h</span>
+              <div className="relative h-4 mt-0.5 text-[9px] text-text-tertiary font-mono select-none">
+                <span className="absolute left-0">1h</span>
+                <span className="absolute -translate-x-1/2" style={{ left: '21.7%' }}>6h</span>
+                <span className="absolute -translate-x-1/2" style={{ left: '47.8%' }}>12h</span>
+                <span className="absolute -translate-x-1/2" style={{ left: '73.9%' }}>18h</span>
+                <span className="absolute right-0">24h</span>
               </div>
             </div>
 
@@ -302,31 +335,44 @@ export default function AdminFlashSalePage() {
                     exit={{ opacity: 0, y: 5 }}
                     className="absolute z-20 left-0 right-0 top-full mt-1 bg-bg-secondary border border-border rounded-lg shadow-xl max-h-60 overflow-y-auto"
                   >
-                    {filteredProducts.length > 0 ? (
-                      filteredProducts.map((p) => (
-                        <button
-                          key={p._id}
-                          type="button"
-                          onClick={() => handleSelectProduct(p)}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-bg-tertiary text-left text-xs transition-colors border-b border-border/40 last:border-0"
-                        >
-                          {p.images?.[0] ? (
-                            <img src={p.images[0]} alt="" className="w-8 h-8 object-cover rounded" />
-                          ) : (
-                            <div className="w-8 h-8 rounded bg-bg-tertiary flex items-center justify-center"><Package size={12} /></div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-text-primary truncate">{p.name}</p>
-                            <p className="text-[10px] text-text-tertiary">
-                              Orig: PKR {p.price.toLocaleString()} · Sale: <span className="text-accent font-semibold">PKR {p.discountPrice.toLocaleString()}</span>
-                            </p>
-                          </div>
-                          <Plus size={14} className="text-accent shrink-0" />
-                        </button>
-                      ))
+                    {allProducts.length > 0 ? (
+                      allProducts.map((p) => {
+                        const isDiscounted = p.discountPrice && p.discountPrice < p.price
+                        return (
+                          <button
+                            key={p._id}
+                            type="button"
+                            onClick={() => handleProductClick(p)}
+                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-bg-tertiary text-left text-xs transition-colors border-b border-border/40 last:border-0"
+                          >
+                            {p.images?.[0] ? (
+                              <img src={p.images[0]} alt="" className="w-8 h-8 object-cover rounded" />
+                            ) : (
+                              <div className="w-8 h-8 rounded bg-bg-tertiary flex items-center justify-center"><Package size={12} /></div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-text-primary truncate">{p.name}</p>
+                              {isDiscounted ? (
+                                <p className="text-[10px] text-text-tertiary">
+                                  Orig: PKR {p.price.toLocaleString()} · Sale: <span className="text-accent font-semibold">PKR {p.discountPrice.toLocaleString()}</span>
+                                </p>
+                              ) : (
+                                <p className="text-[10px] text-warning font-semibold">
+                                  Price: PKR {p.price.toLocaleString()} · No discount set (Click to configure)
+                                </p>
+                              )}
+                            </div>
+                            {isDiscounted ? (
+                              <Plus size={14} className="text-accent shrink-0" />
+                            ) : (
+                              <ExternalLink size={14} className="text-text-tertiary shrink-0" />
+                            )}
+                          </button>
+                        )
+                      })
                     ) : (
                       <div className="p-4 text-center text-xs text-text-tertiary">
-                        No products found with an active discount price set.
+                        No products found.
                       </div>
                     )}
                   </motion.div>
