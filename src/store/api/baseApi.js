@@ -1,10 +1,11 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { getToken } from '../../utils/tokenHelpers'
 import { logout } from '../slices/authSlice'
+import { BACKEND_URL } from '../../config/api'
 
 // Base query with JWT injection
 const baseQueryWithAuth = fetchBaseQuery({
-  baseUrl: 'http://localhost:5000',
+  baseUrl: BACKEND_URL,
   prepareHeaders: (headers) => {
     const token = getToken()
     if (token) {

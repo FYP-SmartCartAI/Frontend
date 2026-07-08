@@ -9,6 +9,7 @@ import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import BlockedAccountModal from '../../components/ui/BlockedAccountModal'
 import toast from 'react-hot-toast'
+import { BACKEND_URL } from '../../config/api'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -43,7 +44,7 @@ export default function LoginPage() {
       toast.success(`Welcome back, ${result.user.name}!`)
     } catch (err) {
       const status = err?.status
-      const msg    = err?.data?.message || err?.error
+      const msg = err?.data?.message || err?.error
 
       if (status === 429) {
         setLoginError('Too many attempts. Please wait a moment and try again.')
@@ -157,7 +158,7 @@ export default function LoginPage() {
           {/* OAuth Buttons */}
           <div className="flex flex-col gap-2">
             <a
-              href="http://localhost:5000/api/auth/oauth/google"
+              href={`${BACKEND_URL}/api/auth/oauth/google`}
               className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border text-sm text-text-secondary hover:border-border-accent hover:text-text-primary transition-all"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
@@ -170,7 +171,7 @@ export default function LoginPage() {
             </a>
 
             <a
-              href="http://localhost:5000/api/auth/oauth/facebook"
+              href={`${BACKEND_URL}/api/auth/oauth/facebook`}
               className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-[var(--radius-md)] border border-border text-sm text-text-secondary hover:border-border-accent hover:text-text-primary transition-all"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging'
 import { getToken as getAuthToken } from './utils/tokenHelpers'
+import { BACKEND_URL } from './config/api'
 
 const firebaseConfig = {
   apiKey:
@@ -21,7 +22,6 @@ const vapidKey =
   'BAB6J0xu0nOIrmCP93iZX2BfR4ijkmd9uoxgtz4C7mKpvpN_GHi6L8b5J5ATqiw-a-qTZPTwfW7edy8gYwCwT3k'
 
 const app = initializeApp(firebaseConfig)
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 let messagingInstance = null
 let messagingInitPromise = null

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import { io } from 'socket.io-client'
+import { BACKEND_URL } from '../config/api'
 import { selectIsAuth, selectToken } from '../store/slices/authSlice'
 import { notificationApi } from '../store/api/notificationApi'
 import { showNotificationToast } from '../utils/notificationToast'
@@ -93,8 +94,6 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(false)
       return
     }
-
-    const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
     if (sharedSocket && sharedToken === token) {
       attachSocketListeners(sharedSocket, dispatchRef.current)
