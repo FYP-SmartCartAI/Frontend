@@ -23,7 +23,7 @@ function StatCard({ icon: Icon, label, value, sub, accent = false }) {
       <div className={`w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center mb-3 ${accent ? 'bg-accent/10' : 'bg-bg-tertiary'}`}>
         <Icon size={16} className={accent ? 'text-accent' : 'text-text-secondary'} />
       </div>
-      <p className="text-2xl font-bold text-text-primary mb-1 font-[var(--font-mono)]">{value}</p>
+      <p className="text-xl sm:text-2xl font-bold text-text-primary mb-1 truncate font-[var(--font-mono)]" title={value}>{value}</p>
       <p className="text-xs text-text-secondary">{label}</p>
       {sub && <p className="text-[10px] text-text-tertiary mt-0.5">{sub}</p>}
     </motion.div>
@@ -62,7 +62,7 @@ export default function SubadminDashboard() {
       </motion.div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <StatCardSkeleton key={i} />)}
         </div>
       ) : (
@@ -70,7 +70,7 @@ export default function SubadminDashboard() {
           variants={stagger}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           <StatCard icon={ShoppingBag} label="Total Orders"   value={stats?.totalOrders?.toLocaleString() ?? '0'} accent />
           <StatCard icon={Banknote}    label="COD Pending"    value={stats?.codPending?.toLocaleString() ?? '0'} />
