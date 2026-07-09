@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
@@ -18,6 +18,7 @@ export default function CheckoutPage() {
   const [createOrder, { isLoading }] = useCreateOrderMutation()
   const [verifyStock]               = useVerifyCartStockMutation()
   const navigate                    = useNavigate()
+  const submittingRef               = useRef(false)
 
   useEffect(() => {
     let active = true
@@ -52,6 +53,8 @@ export default function CheckoutPage() {
   const items         = cart?.items || []
 
   const onSubmit = async (data) => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     try {
       const result = await createOrder({
         items: items.map((item) => ({
@@ -76,6 +79,8 @@ export default function CheckoutPage() {
       }
     } catch (err) {
       toast.error(err?.data?.message || 'Could not place order')
+    } finally {
+      submittingRef.current = false
     }
   }
 

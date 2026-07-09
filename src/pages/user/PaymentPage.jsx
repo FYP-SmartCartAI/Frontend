@@ -68,6 +68,7 @@ export default function PaymentPage() {
   const [initiate, { isLoading: initing }] = useInitiatePaymentMutation()
   const [devConfirm]                       = useDevConfirmPaymentMutation()
   const [verifyPayment]                      = useVerifyPaymentMutation()
+  const payingRef                          = useRef(false)
 
   const { data: paymentData } = useGetPaymentByOrderQuery(orderId, {
     skip: !orderId || paid || !polling,
@@ -131,6 +132,8 @@ export default function PaymentPage() {
     ev.preventDefault()
     if (!validate()) return
     if (!intentId) { toast.error('Payment not ready yet, please wait'); return }
+    if (payingRef.current) return
+    payingRef.current = true
     setPaying(true)
     setPolling(true)
     try {
@@ -139,10 +142,12 @@ export default function PaymentPage() {
       if (confirmed) {
         markPaidAndRedirect()
       } else {
+        payingRef.current = false
         setPaying(false)
         toast.error('Payment submitted but confirmation is delayed. Check your order shortly.')
       }
     } catch (err) {
+      payingRef.current = false
       setPaying(false)
       toast.error(err?.data?.message || 'Payment failed. Please try again.')
     }
